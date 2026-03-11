@@ -1,0 +1,209 @@
+// lerobot_inference.proto
+// LeRobot 推理服务 gRPC 接口定义 (精简版)
+// 适用于 Astribot 机器人控制
+// 支持 V2.0 数据格式 (22/25维)
+
+syntax = "proto3";
+
+package lerobot;
+
+// ============================================================================
+// 消息定义
+// ============================================================================
+
+// 观测数据 - 从机器人 Client 发送到推理 Server
+message Observation {
+    // 当前关节状态 [arm_left(7), arm_right(7), gripper_left(1), gripper_right(1), head(2), torso(4), chassis(3)?]
+    repeated float joint_positions = 1;
+    
+    // 图像数据 (可选，用于视觉策略)
+    repeated ImageData images = 2;
+    
+    // 时间戳 (Unix timestamp)
+    double timestamp = 3;
+    
+    // Episode 标识
+    int32 episode_id = 4;
+    
+    // 帧索引
+    int32 frame_index = 5;
+    
+    // 额外状态信息 (JSON 格式字符串)
+    string extra_state = 6;
+}
+
+// 图像数据
+message ImageData {
+    // 相机名称 e.g., "cam_left", "cam_right", "cam_wrist"
+    string camera_name = 1;
+    
+    // 图像数据 (JPEG/PNG 编码)
+    bytes data = 2;
+    
+    // 图像尺寸
+    int32 width = 3;
+    int32 height = 4;
+    
+    // 编码格式 "jpeg", "png", "raw"
+    string encoding = 5;
+}
+
+// 动作指令 - 从推理 Server 返回到机器人 Client
+message Action {
+    // V2.0 格式: [arm_left(7), arm_right(7), gripper_left(1), gripper_right(1), head(2), torso(4), chassis(3)?]
+    repeated float values = 1;
+    
+    // 是否是最后一帧
+    bool is_terminal = 2;
+    
+    // 置信度 (可选)
+    float confidence = 3;
+    
+    // 状态码
+    StatusCode status = 4;
+    
+    // 错误消息 (如果有)
+    string error_message = 5;
+    
+    // 服务端帧计数
+    int32 server_frame_index = 6;
+}
+
+// 动作块 - 一次性返回多个 action (用于 action chunking 策略)
+message ActionChunk {
+    // 多个 action，每个 action 是一个 float 数组
+    // actions[i] 对应第 i 步的 action
+    repeated ActionStep actions = 1;
+    
+    // chunk 大小 (action 数量)
+    int32 chunk_size = 2;
+    
+    // action 维度 (每个 action 的 float 数量)
+    int32 action_dim = 3;
+    
+    // 是否是最后一个 chunk (episode 结束)
+    bool is_terminal = 4;
+    
+    // 状态码
+    StatusCode status = 5;
+    
+    // 错误消息 (如果有)
+    string error_message = 6;
+    
+    // 服务端当前帧索引 (chunk 的起始帧)
+    int32 server_frame_index = 7;
+}
+
+// 单步 action (用于 ActionChunk)
+message ActionStep {
+    repeated float values = 1;
+}
+
+// 状态码
+enum StatusCode {
+    OK = 0;
+    ERROR = 1;
+    NOT_READY = 2;
+    EPISODE_END = 3;
+    MODEL_NOT_LOADED = 4;
+    INVALID_INPUT = 5;
+}
+
+// 控制命令 (精简: 只保留 RESET 和 SET_EPISODE)
+message ControlCommand {
+    CommandType type = 1;
+    map<string, string> params = 2;
+}
+
+// 命令类型 (精简版)
+enum CommandType {
+    CMD_RESET = 0;
+    CMD_SET_EPISODE = 1;
+}
+
+// Action 配置 - 控制输出哪些部件
+message ActionOutputConfig {
+    // 是否包含底盘控制 (默认 false)
+    bool enable_chassis = 1;
+    // 是否包含头部控制 (默认 true)
+    bool enable_head = 2;
+    // 是否包含腰部控制 (默认 true)
+    bool enable_torso = 3;
+}
+
+// 策略配置 - Client 端发送给 Server 端
+message PolicyConfig {
+    // 模式: "model"
+    string mode = 1;
+    
+    // 模型路径或 HuggingFace repo id
+    string model_path = 2;
+    
+    // 推理设备 ("cuda", "cpu", "mps")
+    string device = 4;
+    
+    // 策略类型 ("act", "diffusion", "pi0" 等，可选，自动检测)
+    string policy_type = 5;
+    
+    // Action 输出配置 (可选)
+    ActionOutputConfig action_config = 6;
+}
+
+// 服务状态
+message ServiceStatus {
+    // 服务是否就绪
+    bool is_ready = 1;
+    
+    // 模型/数据集名称
+    string model_name = 2;
+    
+    // 当前 episode
+    int32 current_episode = 3;
+    
+    // 当前帧索引
+    int32 current_frame = 4;
+    
+    // 总帧数 (如果已知)
+    int32 total_frames = 5;
+    
+    // 推荐 FPS
+    float fps = 6;
+    
+    // 状态消息
+    string message = 7;
+    
+    // 运行模式 "model" / "dataset"
+    string mode = 8;
+}
+
+// 空消息
+message Empty {}
+
+// ============================================================================
+// 服务定义 (精简版)
+// ============================================================================
+
+service LeRobotInferenceService {
+    // 配置策略 - Client 连接时发送，指定模型/数据集路径
+    rpc Configure(PolicyConfig) returns (ServiceStatus);
+    
+    // 单次推理 (同步) - 返回单个 action
+    rpc Predict(Observation) returns (Action);
+    
+    // Chunk 推理 (同步) - 一次性返回完整的 action chunk
+    // 适用于 action chunking 策略 (ACT, Diffusion 等)
+    // Client 端在本地消费 chunk，用完后再请求新的
+    rpc PredictChunk(Observation) returns (ActionChunk);
+    
+    // 流式推理 (双向流，用于高频控制)
+    rpc StreamPredict(stream Observation) returns (stream Action);
+    
+    // 发送控制命令 (RESET / SET_EPISODE)
+    rpc Control(ControlCommand) returns (ServiceStatus);
+    
+    // 获取服务状态
+    rpc GetStatus(Empty) returns (ServiceStatus);
+    
+    // 重置推理状态
+    rpc Reset(Empty) returns (ServiceStatus);
+}
