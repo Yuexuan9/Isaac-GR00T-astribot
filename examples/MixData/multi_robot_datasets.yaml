@@ -1,0 +1,25 @@
+datasets:
+  # - dataset_paths: 
+  #     - "/workspace1/baiduData/qingloongROS2/2f5c4758f43a44b28b3f3fe06ec43e98"
+  #     - "/workspace1/baiduData/qingloongROS2/qingloong_PencilsPutInThePencilHolder"
+  #     - "/workspace1/baiduData/qingloongROS2/qingloong_Foldingclothes_20260207_merge_v21"
+  #     - "/workspace1/baiduData/qingloongROS2/qingloong_PickingUpTheCoffeeCup"
+  #   embodiment_tag: "qingloong"
+  #   mix_ratio: 0
+
+  # - dataset_paths: 
+  #     - "/workspace1/baiduData/ur_dual_arm/6b7d5bdbedca43919d253b4e4b6bbf8e"
+  #     - "/workspace1/baiduData/ur_dual_arm/d46b0c7032ec47f6a5538da79233475a"
+  #     - "/workspace1/baiduData/ur_dual_arm/ur_mixed_sorting_20260130_v21"
+  #   embodiment_tag: "ur_bimanual"
+  #   mix_ratio: 0
+
+  - dataset_paths: 
+      - "/workspace/data/lerobot_v21/09d2e82faebd43f090c18da6cfd31f79/astribot_s1/09d2e82faebd43f090c18da6cfd31f79"
+    embodiment_tag: "astribot"
+    mix_ratio: 1
+
+  # - dataset_paths: 
+  #     - "/workspace/data/lerobot_v21/58d4eb0f9a9d42e495f6e0b72ce83b4a/astribot_s1/58d4eb0f9a9d42e495f6e0b72ce83b4a"
+  #   embodiment_tag: "astribot"
+  #   mix_ratio: 0.5
