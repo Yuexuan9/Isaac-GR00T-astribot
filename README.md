@@ -171,4 +171,13 @@ python src/client/inference_client.py \
   --use-chunk
 ```
 
+# MixData Training
+
+This project supports multi-task policy learning using mixed training datasets across diverse robotic manipulation tasks.
+All implementation code for mixed-data training pipelines is organized and contained within the examples/MixData directory.
+```
+(gr00t) root@53aeb2bed758:/workspace/gr00t/examples#
+python precompute_with_custom_config.py --dataset-config MixData/multi_robot_datasets.yaml --num-workers 8
+```
+
 ---
