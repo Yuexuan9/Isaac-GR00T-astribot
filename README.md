@@ -171,6 +171,8 @@ python src/client/inference_client.py \
   --use-chunk
 ```
 
+---
+
 # MixData Training
 
 This project supports multi-task policy learning using mixed training datasets across diverse robotic manipulation tasks.
